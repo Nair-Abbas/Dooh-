@@ -4,13 +4,11 @@ import { IntroSplashScreen } from './src/screens/intro/IntroSplashScreen';
 import { RoleSelectionScreen } from './src/screens/auth/RoleSelectionScreen';
 
 // Passenger Screens
-import { PassengerOnboardingScreen } from './src/screens/passenger/PassengerOnboardingScreen';
 import { PassengerLoginScreen } from './src/screens/passenger/PassengerLoginScreen';
 import { PassengerRegisterScreen } from './src/screens/passenger/PassengerRegisterScreen';
 import { PassengerRootNavigator } from './src/screens/passenger/PassengerRootNavigator';
 
 // Driver Screens
-import { DriverOnboardingScreen } from './src/screens/driver/DriverOnboardingScreen';
 import { DriverLoginScreen } from './src/screens/driver/DriverLoginScreen';
 import { DriverRegisterScreen } from './src/screens/driver/DriverRegisterScreen';
 import { DriverRootNavigator } from './src/screens/driver/DriverRootNavigator';
@@ -18,11 +16,9 @@ import { DriverRootNavigator } from './src/screens/driver/DriverRootNavigator';
 type AppScreen =
   | 'splash'
   | 'role_selection'
-  | 'passenger_onboarding'
   | 'passenger_login'
   | 'passenger_register'
   | 'passenger_app'
-  | 'driver_onboarding'
   | 'driver_login'
   | 'driver_register'
   | 'driver_app';
@@ -43,22 +39,15 @@ export default function App() {
         <RoleSelectionScreen
           onSelectRole={(role) => {
             if (role === 'passenger') {
-              setScreen('passenger_onboarding');
+              setScreen('passenger_login');
             } else if (role === 'driver') {
-              setScreen('driver_onboarding');
+              setScreen('driver_login');
             }
           }}
         />
       )}
 
       {/* ══════════════ PASSENGER FLOW ══════════════ */}
-      {/* Passenger Onboarding Walkthrough */}
-      {screen === 'passenger_onboarding' && (
-        <PassengerOnboardingScreen
-          onComplete={() => setScreen('passenger_login')}
-        />
-      )}
-
       {/* SCREEN 4: Passenger Login */}
       {screen === 'passenger_login' && (
         <PassengerLoginScreen
@@ -94,13 +83,6 @@ export default function App() {
       )}
 
       {/* ══════════════ DRIVER FLOW ══════════════ */}
-      {/* Driver Onboarding Walkthrough */}
-      {screen === 'driver_onboarding' && (
-        <DriverOnboardingScreen
-          onComplete={() => setScreen('driver_login')}
-        />
-      )}
-
       {/* SCREEN 15: Driver Login */}
       {screen === 'driver_login' && (
         <DriverLoginScreen

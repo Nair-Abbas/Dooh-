@@ -11,14 +11,12 @@ import { PassengerProfileScreen } from './PassengerProfileScreen';
 import { PassengerEditProfileScreen } from './PassengerEditProfileScreen';
 import { PassengerSettingsScreen } from './PassengerSettingsScreen';
 import { PassengerHelpScreen } from './PassengerHelpScreen';
-import { PassengerOnboardingScreen } from './PassengerOnboardingScreen';
 
 interface PassengerRootNavigatorProps {
   onSignOut: () => void;
 }
 
 const PassengerAppInner: React.FC = () => {
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<PassengerTab>('home');
   const [activeSubScreen, setActiveSubScreen] = useState<
     'coupon_detail' | 'edit_profile' | 'settings' | 'help' | null
@@ -29,10 +27,6 @@ const PassengerAppInner: React.FC = () => {
     setSelectedCoupon(coupon);
     setActiveSubScreen('coupon_detail');
   };
-
-  if (showOnboarding) {
-    return <PassengerOnboardingScreen onComplete={() => setShowOnboarding(false)} />;
-  }
 
   return (
     <View style={styles.root}>

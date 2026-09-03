@@ -9,7 +9,6 @@ import { DriverProfileScreen } from './DriverProfileScreen';
 import { DriverEditProfileScreen } from './DriverEditProfileScreen';
 import { DriverSettingsScreen } from './DriverSettingsScreen';
 import { DriverHelpScreen } from './DriverHelpScreen';
-import { DriverOnboardingScreen } from './DriverOnboardingScreen';
 
 interface DriverRootNavigatorProps {
   initialUserData?: any;
@@ -17,15 +16,10 @@ interface DriverRootNavigatorProps {
 }
 
 const DriverAppInner: React.FC = () => {
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<DriverTab>('home');
   const [activeSubScreen, setActiveSubScreen] = useState<
     'edit_profile' | 'settings' | 'help' | null
   >(null);
-
-  if (showOnboarding) {
-    return <DriverOnboardingScreen onComplete={() => setShowOnboarding(false)} />;
-  }
 
   return (
     <View style={styles.root}>
