@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "DOOH",
+    "slug": "dooh-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.dooh.app"
+    }
+  }
+}
