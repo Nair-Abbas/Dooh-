@@ -10,15 +10,14 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   Platform,
-  Image,
   Easing,
   StatusBar,
 } from 'react-native';
-import Svg, { Path, Rect, Circle } from 'react-native-svg';
-import { COLORS, TYPOGRAPHY, RADIUS, SHADOWS, SAFE_TOP_PADDING } from '../../constants/theme';
+import Svg, { Path, Circle } from 'react-native-svg';
+import { TYPOGRAPHY, RADIUS, SHADOWS, SAFE_TOP_PADDING } from '../../constants/theme';
 import { APP_IMAGES } from '../../constants/assets';
 
-const { width: SW, height: SH } = Dimensions.get('window');
+const { width: SW } = Dimensions.get('window');
 
 interface DriverOnboardingScreenProps {
   onComplete: () => void;
@@ -29,31 +28,53 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
-  
-  // Interactive Simulation States
-  const [isDemoOnline, setIsDemoOnline] = useState(true);
-  const [isSurgeMode, setIsSurgeMode] = useState(false);
-  const [hasTriggeredPayout, setHasTriggeredPayout] = useState(false);
 
-  // Animations (Alive & Cinematic)
+  // ── Interactive Simulation States ──
+  const [isDemoOnline, setIsDemoOnline] = useState(true);
+  const [surgeTier, setSurgeTier] = useState<1 | 2 | 3>(2); // 1 = 1.0x, 2 = 1.4x, 3 = 2.0x
+  const [hasTriggeredPayout, setHasTriggeredPayout] = useState(false);
+  const [payoutProgress, setPayoutProgress] = useState(0);
+
+  // ── Persistent Ambient Animations ──
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const imageZoom = useRef(new Animated.Value(1.0)).current;
   const badgePop = useRef(new Animated.Value(1)).current;
+  const orbGlow = useRef(new Animated.Value(0.4)).current;
+  const radarWave1 = useRef(new Animated.Value(0)).current;
+  const radarWave2 = useRef(new Animated.Value(0)).current;
+  const payoutBarAnim = useRef(new Animated.Value(0)).current;
+
+  // ── Staggered Entrance Animations for Active Slide ──
+  const slideContentAnim = useRef(new Animated.Value(0)).current;
+
+  const runSlideEntrance = () => {
+    slideContentAnim.setValue(0);
+    Animated.spring(slideContentAnim, {
+      toValue: 1,
+      friction: 7,
+      tension: 50,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  useEffect(() => {
+    runSlideEntrance();
+  }, [currentIndex]);
 
   useEffect(() => {
     // Ambient radar pulse
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.14,
-          duration: 1200,
+          toValue: 1.15,
+          duration: 1300,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1.0,
-          duration: 1200,
+          duration: 1300,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
@@ -64,14 +85,14 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
-          toValue: -6,
-          duration: 1500,
+          toValue: -7,
+          duration: 1600,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(floatAnim, {
           toValue: 0,
-          duration: 1500,
+          duration: 1600,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
@@ -82,42 +103,87 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
     Animated.loop(
       Animated.sequence([
         Animated.timing(imageZoom, {
-          toValue: 1.06,
-          duration: 4000,
+          toValue: 1.07,
+          duration: 4500,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(imageZoom, {
           toValue: 1.0,
-          duration: 4000,
+          duration: 4500,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ])
     ).start();
-  }, [pulseAnim, floatAnim, imageZoom]);
+
+    // Background orb glow
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(orbGlow, {
+          toValue: 0.85,
+          duration: 2500,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(orbGlow, {
+          toValue: 0.4,
+          duration: 2500,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Sonar radar ripple rings
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(radarWave1, { toValue: 1, duration: 1800, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(radarWave1, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    ).start();
+
+    setTimeout(() => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(radarWave2, { toValue: 1, duration: 1800, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(radarWave2, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ])
+      ).start();
+    }, 900);
+  }, [floatAnim, imageZoom, orbGlow, pulseAnim, radarWave1, radarWave2]);
 
   const handleToggleOnline = () => {
-    setIsDemoOnline(!isDemoOnline);
+    setIsDemoOnline((prev) => !prev);
     Animated.sequence([
-      Animated.timing(badgePop, { toValue: 1.25, duration: 120, useNativeDriver: true }),
-      Animated.spring(badgePop, { toValue: 1.0, friction: 4, useNativeDriver: true }),
+      Animated.timing(badgePop, { toValue: 1.25, duration: 100, useNativeDriver: true }),
+      Animated.spring(badgePop, { toValue: 1.0, friction: 3.5, tension: 70, useNativeDriver: true }),
     ]).start();
   };
 
-  const handleToggleSurge = () => {
-    setIsSurgeMode(!isSurgeMode);
+  const handleCycleSurge = () => {
+    setSurgeTier((prev) => (prev === 1 ? 2 : prev === 2 ? 3 : 1));
     Animated.sequence([
-      Animated.timing(badgePop, { toValue: 1.25, duration: 120, useNativeDriver: true }),
-      Animated.spring(badgePop, { toValue: 1.0, friction: 4, useNativeDriver: true }),
+      Animated.timing(badgePop, { toValue: 1.3, duration: 100, useNativeDriver: true }),
+      Animated.spring(badgePop, { toValue: 1.0, friction: 4, tension: 80, useNativeDriver: true }),
     ]).start();
   };
 
   const handleTriggerPayout = () => {
     setHasTriggeredPayout(true);
-    Animated.sequence([
-      Animated.timing(badgePop, { toValue: 1.3, duration: 120, useNativeDriver: true }),
-      Animated.spring(badgePop, { toValue: 1.0, friction: 4, useNativeDriver: true }),
+    payoutBarAnim.setValue(0);
+
+    Animated.parallel([
+      Animated.timing(payoutBarAnim, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      Animated.sequence([
+        Animated.timing(badgePop, { toValue: 1.3, duration: 100, useNativeDriver: true }),
+        Animated.spring(badgePop, { toValue: 1.0, friction: 4, tension: 80, useNativeDriver: true }),
+      ]),
     ]).start();
   };
 
@@ -128,7 +194,7 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
       tag: 'IN-CABIN TELEMETRY',
       tagColor: '#10B981',
       title: 'Keep Screen Active',
-      desc: 'Keep your in-vehicle DOOH screen powered on to automatically stream brand ad loops.',
+      desc: 'Keep your in-vehicle DOOH screen powered on during rides to automatically stream brand ad loops and earn passive revenue.',
       image: APP_IMAGES.roleDriver,
       floatingBadge: isDemoOnline ? '🟢 5G Connected' : '⚪ Standby Mode',
       floatingColor: isDemoOnline ? '#10B981' : '#94A3B8',
@@ -137,7 +203,15 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
         <View style={styles.hudOverlayContainer}>
           <View style={styles.hudTopRow}>
             <View style={[styles.hudLiveBadge, { borderColor: isDemoOnline ? '#10B981' : '#64748B' }]}>
-              <View style={[styles.hudLiveDot, { backgroundColor: isDemoOnline ? '#10B981' : '#94A3B8' }]} />
+              <Animated.View
+                style={[
+                  styles.hudLiveDot,
+                  {
+                    backgroundColor: isDemoOnline ? '#10B981' : '#94A3B8',
+                    transform: [{ scale: pulseAnim }],
+                  },
+                ]}
+              />
               <Text style={[styles.hudLiveText, { color: isDemoOnline ? '#10B981' : '#94A3B8' }]}>
                 {isDemoOnline ? 'DUAL DISPLAYS ONLINE' : 'SCREENS ASLEEP'}
               </Text>
@@ -148,17 +222,36 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
           </View>
 
           {/* Center Screen Mirror Frame */}
-          <View style={[styles.centerTabletFrame, { borderColor: isDemoOnline ? 'rgba(16, 185, 129, 0.5)' : 'rgba(255, 255, 255, 0.2)' }]}>
+          <View
+            style={[
+              styles.centerTabletFrame,
+              {
+                borderColor: isDemoOnline ? 'rgba(16, 185, 129, 0.55)' : 'rgba(255, 255, 255, 0.2)',
+                backgroundColor: isDemoOnline ? 'rgba(6, 40, 28, 0.65)' : 'rgba(0, 0, 0, 0.55)',
+              },
+            ]}
+          >
             <View style={[styles.cornerBracket, styles.cornerTL, { borderColor: isDemoOnline ? '#10B981' : '#94A3B8' }]} />
             <View style={[styles.cornerBracket, styles.cornerTR, { borderColor: isDemoOnline ? '#10B981' : '#94A3B8' }]} />
             <View style={[styles.cornerBracket, styles.cornerBL, { borderColor: isDemoOnline ? '#10B981' : '#94A3B8' }]} />
             <View style={[styles.cornerBracket, styles.cornerBR, { borderColor: isDemoOnline ? '#10B981' : '#94A3B8' }]} />
-            
-            <View style={[styles.channelBannerPill, { backgroundColor: isDemoOnline ? 'rgba(16, 185, 129, 0.25)' : 'rgba(0, 0, 0, 0.6)' }]}>
+
+            <View
+              style={[
+                styles.channelBannerPill,
+                { backgroundColor: isDemoOnline ? 'rgba(16, 185, 129, 0.25)' : 'rgba(0, 0, 0, 0.6)' },
+              ]}
+            >
               <Text style={styles.channelBannerText}>
-                {isDemoOnline ? '⚡ Broadcast Loop Active • Verified Impressions' : '💤 Tap image to wake screens & start earning'}
+                {isDemoOnline
+                  ? '⚡ 4K Broadcast Active • Verified Impressions'
+                  : '💤 Tap image to power on display'}
               </Text>
             </View>
+
+            <Text style={styles.signalMetaText}>
+              {isDemoOnline ? '📶 5G Ultra Wideband • Latency 14ms' : 'Offline • Ready for 12V ignition'}
+            </Text>
           </View>
 
           <View style={styles.hudBottomPrompt}>
@@ -177,30 +270,116 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
       tag: 'GEO AD ENGINE',
       tagColor: '#00E5FF',
       title: 'Drive & Stream Ads',
-      desc: 'Location-targeted brand campaigns play automatically with zero driver effort required.',
+      desc: 'GPS-targeted brand campaigns play automatically with zero driver effort required as you navigate city commercial hubs.',
       image: APP_IMAGES.vehicleDoohExterior,
-      floatingBadge: isSurgeMode ? '🔥 1.4x Surge Zone' : '📍 Standard Route',
-      floatingColor: isSurgeMode ? '#FF2D78' : '#00E5FF',
-      interactiveAction: handleToggleSurge,
+      floatingBadge:
+        surgeTier === 3
+          ? '⚡ 2.0x Prime Surge'
+          : surgeTier === 2
+          ? '🔥 1.4x Commercial Zone'
+          : '📍 Standard Route',
+      floatingColor: surgeTier === 3 ? '#FFB800' : surgeTier === 2 ? '#FF2D78' : '#00E5FF',
+      interactiveAction: handleCycleSurge,
       overlayHUD: (
         <View style={styles.hudOverlayContainer}>
           <View style={styles.hudTopRow}>
             <View style={[styles.hudLiveBadge, { backgroundColor: 'rgba(0, 229, 255, 0.2)', borderColor: '#00E5FF' }]}>
-              <View style={styles.hudLiveDot} />
+              <Animated.View
+                style={[
+                  styles.hudLiveDot,
+                  { backgroundColor: '#00E5FF', transform: [{ scale: pulseAnim }] },
+                ]}
+              />
               <Text style={styles.hudLiveText}>GPS GEO-TARGETING</Text>
             </View>
             <View style={styles.hudResPill}>
-              <Text style={styles.hudResText}>{isSurgeMode ? 'SURGE 1.4X' : 'STANDARD'}</Text>
+              <Text style={styles.hudResText}>
+                {surgeTier === 3 ? 'BOOST 2.0X' : surgeTier === 2 ? 'SURGE 1.4X' : 'STANDARD 1.0X'}
+              </Text>
             </View>
           </View>
 
-          {/* Geo Radar Frame */}
-          <View style={[styles.centerTabletFrame, { borderColor: isSurgeMode ? 'rgba(255, 45, 120, 0.6)' : 'rgba(0, 229, 255, 0.4)' }]}>
-            <View style={[styles.channelBannerPill, { backgroundColor: isSurgeMode ? 'rgba(255, 45, 120, 0.3)' : 'rgba(0, 229, 255, 0.2)' }]}>
+          {/* Geo Radar Frame with Ripple Animations */}
+          <View
+            style={[
+              styles.centerTabletFrame,
+              {
+                borderColor:
+                  surgeTier === 3
+                    ? 'rgba(255, 184, 0, 0.65)'
+                    : surgeTier === 2
+                    ? 'rgba(255, 45, 120, 0.65)'
+                    : 'rgba(0, 229, 255, 0.45)',
+              },
+            ]}
+          >
+            {/* Animated Radar Pulse Rings */}
+            <Animated.View
+              style={[
+                styles.radarRing,
+                {
+                  transform: [
+                    {
+                      scale: radarWave1.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.5, 2.2],
+                      }),
+                    },
+                  ],
+                  opacity: radarWave1.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.7, 0],
+                  }),
+                  borderColor: surgeTier === 3 ? '#FFB800' : surgeTier === 2 ? '#FF2D78' : '#00E5FF',
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.radarRing,
+                {
+                  transform: [
+                    {
+                      scale: radarWave2.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.5, 2.2],
+                      }),
+                    },
+                  ],
+                  opacity: radarWave2.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.7, 0],
+                  }),
+                  borderColor: surgeTier === 3 ? '#FFB800' : surgeTier === 2 ? '#FF2D78' : '#00E5FF',
+                },
+              ]}
+            />
+
+            <View
+              style={[
+                styles.channelBannerPill,
+                {
+                  backgroundColor:
+                    surgeTier === 3
+                      ? 'rgba(255, 184, 0, 0.3)'
+                      : surgeTier === 2
+                      ? 'rgba(255, 45, 120, 0.3)'
+                      : 'rgba(0, 229, 255, 0.25)',
+                },
+              ]}
+            >
               <Text style={styles.channelBannerText}>
-                {isSurgeMode ? '🔥 Commercial Hotspot Active (+40% Boost)' : '🗺️ Central City Transit Route (Auto-Streaming)'}
+                {surgeTier === 3
+                  ? '⚡ Prime Downtown Corridor (+100% Rate)'
+                  : surgeTier === 2
+                  ? '🔥 Commercial Hotspot (+40% Boost)'
+                  : '🗺️ Central City Transit Route (1.0x Rate)'}
               </Text>
             </View>
+
+            <Text style={styles.signalMetaText}>
+              {surgeTier === 3 ? 'Estimated: £4.20 / hr bonus' : surgeTier === 2 ? 'Estimated: £2.80 / hr bonus' : 'Streaming base payout rates'}
+            </Text>
           </View>
 
           <View style={styles.hudBottomPrompt}>
@@ -217,7 +396,7 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
       tag: 'DIRECT PAYOUTS',
       tagColor: '#FFB800',
       title: 'Track Daily Earnings',
-      desc: 'Earn verified cash per passenger trip and withdraw straight to your bank account.',
+      desc: 'Earn guaranteed cash per passenger impression and withdraw straight to your linked bank account with 0% fees.',
       image: APP_IMAGES.safariInCabin,
       floatingBadge: hasTriggeredPayout ? '✓ £18.50 Paid Out!' : 'Available: £18.50',
       floatingColor: '#FFB800',
@@ -225,8 +404,18 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
       overlayHUD: (
         <View style={styles.hudOverlayContainer}>
           <View style={styles.hudTopRow}>
-            <View style={[styles.hudLiveBadge, { backgroundColor: 'rgba(255, 184, 0, 0.25)', borderColor: '#FFB800' }]}>
-              <View style={[styles.hudLiveDot, { backgroundColor: '#FFB800' }]} />
+            <View
+              style={[
+                styles.hudLiveBadge,
+                { backgroundColor: 'rgba(255, 184, 0, 0.25)', borderColor: '#FFB800' },
+              ]}
+            >
+              <Animated.View
+                style={[
+                  styles.hudLiveDot,
+                  { backgroundColor: '#FFB800', transform: [{ scale: pulseAnim }] },
+                ]}
+              />
               <Text style={[styles.hudLiveText, { color: '#FFE494' }]}>DIRECT REVENUE</Text>
             </View>
             <View style={styles.hudResPill}>
@@ -236,20 +425,54 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
 
           {/* Earnings Card */}
           <View style={styles.rewardsGoldCard}>
-            <View style={[styles.coinCircle, { backgroundColor: 'rgba(16, 185, 129, 0.25)' }]}>
-              <Text style={{ fontSize: 18 }}>💷</Text>
-            </View>
-            <View>
+            <Animated.View
+              style={[
+                styles.coinCircle,
+                {
+                  backgroundColor: hasTriggeredPayout ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 184, 0, 0.22)',
+                  transform: [{ scale: pulseAnim }],
+                },
+              ]}
+            >
+              <Text style={{ fontSize: 18 }}>{hasTriggeredPayout ? '✓' : '💷'}</Text>
+            </Animated.View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.rewardsBalanceLabel}>PAYOUT BALANCE</Text>
               <Text style={styles.rewardsBalanceValue}>
-                £18.50 <Text style={[styles.rewardsGbpVal, { color: '#10B981' }]}>{hasTriggeredPayout ? '• Transferred ✓' : '• Ready to withdraw'}</Text>
+                £18.50{' '}
+                <Text
+                  style={[
+                    styles.rewardsGbpVal,
+                    { color: hasTriggeredPayout ? '#10B981' : '#FFD54F' },
+                  ]}
+                >
+                  {hasTriggeredPayout ? '• Transferred to Bank ✓' : '• Ready to Cash Out'}
+                </Text>
               </Text>
+
+              {hasTriggeredPayout && (
+                <View style={styles.payoutTrack}>
+                  <Animated.View
+                    style={[
+                      styles.payoutFill,
+                      {
+                        width: payoutBarAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0%', '100%'],
+                        }),
+                      },
+                    ]}
+                  />
+                </View>
+              )}
             </View>
           </View>
 
           <View style={styles.hudBottomPrompt}>
             <Text style={styles.hudBottomPromptText}>
-              {hasTriggeredPayout ? '✓ Transferred £18.50 to Bank Account' : '👆 Tap image to simulate 1-click payout'}
+              {hasTriggeredPayout
+                ? '✓ Transferred £18.50 to Bank (Sort Code **-**-72)'
+                : '👆 Tap image to simulate 1-click payout'}
             </Text>
           </View>
         </View>
@@ -267,6 +490,14 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
     }
   };
 
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      const prevIndex = currentIndex - 1;
+      flatListRef.current?.scrollToIndex({ index: prevIndex, animated: true });
+      setCurrentIndex(prevIndex);
+    }
+  };
+
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
       const nextIndex = currentIndex + 1;
@@ -276,6 +507,8 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
       onComplete();
     }
   };
+
+  const currentSlide = slides[currentIndex] || slides[0];
 
   const renderSlide = ({ item }: { item: (typeof slides)[0] }) => (
     <View style={styles.slideContainer}>
@@ -324,11 +557,27 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
         {item.overlayHUD}
       </TouchableOpacity>
 
-      {/* ── CLEAN PUNCHY 1-SENTENCE HEADINGS ── */}
-      <View style={styles.infoBox}>
+      {/* ── ANIMATED STAGGERED INFO BOX ── */}
+      <Animated.View
+        style={[
+          styles.infoBox,
+          {
+            opacity: slideContentAnim,
+            transform: [
+              {
+                translateY: slideContentAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [24, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
         <View style={styles.stepBadgeRow}>
           <Text style={[styles.stepNumberText, { color: item.tagColor }]}>{item.step}</Text>
           <View style={[styles.stepLine, { backgroundColor: item.tagColor }]} />
+          <Text style={styles.stepTagLabel}>DRIVER PARTNER NETWORK</Text>
         </View>
 
         <Text style={styles.mainTitle}>{item.title}</Text>
@@ -337,18 +586,22 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
         {/* ── 2 COMPACT SCANNABLE FEATURE TILES ── */}
         <View style={styles.featuresRow}>
           <View style={styles.featureCard}>
-            <Text style={styles.featureEmoji}>{item.bullet1.icon}</Text>
+            <View style={styles.featureIconWrap}>
+              <Text style={styles.featureEmoji}>{item.bullet1.icon}</Text>
+            </View>
             <Text style={styles.featureTitle}>{item.bullet1.title}</Text>
             <Text style={styles.featureDesc}>{item.bullet1.text}</Text>
           </View>
 
           <View style={styles.featureCard}>
-            <Text style={styles.featureEmoji}>{item.bullet2.icon}</Text>
+            <View style={styles.featureIconWrap}>
+              <Text style={styles.featureEmoji}>{item.bullet2.icon}</Text>
+            </View>
             <Text style={styles.featureTitle}>{item.bullet2.title}</Text>
             <Text style={styles.featureDesc}>{item.bullet2.text}</Text>
           </View>
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 
@@ -356,11 +609,45 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor="#070D1E" />
 
+      {/* ── AMBIENT BACKGROUND GLOW ORBS ── */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.ambientOrbTop,
+          {
+            backgroundColor: currentSlide.tagColor,
+            opacity: orbGlow.interpolate({
+              inputRange: [0.4, 0.85],
+              outputRange: [0.12, 0.24],
+            }),
+          },
+        ]}
+      />
+
       {/* ── TOP HEADER (CINEMATIC DARK) ── */}
       <View style={styles.header}>
-        <View style={styles.brandBadge}>
-          <Text style={styles.brandBadgeText}>DRIVER PARTNER</Text>
+        <View style={styles.headerLeft}>
+          {currentIndex > 0 && (
+            <TouchableOpacity style={styles.backButton} onPress={handlePrev} activeOpacity={0.7}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M19 12H5M5 12L12 19M5 12L12 5"
+                  stroke="#CBD5E1"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </TouchableOpacity>
+          )}
+          <View style={[styles.brandBadge, { borderColor: currentSlide.tagColor }]}>
+            <View style={[styles.brandDot, { backgroundColor: currentSlide.tagColor }]} />
+            <Text style={[styles.brandBadgeText, { color: currentSlide.tagColor }]}>
+              DRIVER ONBOARDING
+            </Text>
+          </View>
         </View>
+
         <TouchableOpacity style={styles.skipButton} onPress={onComplete} activeOpacity={0.7}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
@@ -382,22 +669,32 @@ export const DriverOnboardingScreen: React.FC<DriverOnboardingScreenProps> = ({
 
       {/* ── FOOTER CONTROLS ── */}
       <View style={styles.footer}>
-        {/* Step Progress Indicators */}
+        {/* Step Progress Expanding Pill Indicators */}
         <View style={styles.dotsRow}>
-          {slides.map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                i === currentIndex ? styles.dotActive : styles.dotInactive,
-              ]}
-            />
-          ))}
+          {slides.map((slide, i) => {
+            const isActive = i === currentIndex;
+            return (
+              <TouchableOpacity
+                key={slide.id}
+                activeOpacity={0.8}
+                onPress={() => {
+                  flatListRef.current?.scrollToIndex({ index: i, animated: true });
+                  setCurrentIndex(i);
+                }}
+                style={[
+                  styles.dot,
+                  isActive
+                    ? [styles.dotActive, { backgroundColor: slide.tagColor }]
+                    : styles.dotInactive,
+                ]}
+              />
+            );
+          })}
         </View>
 
-        {/* Next / Finish CTA */}
+        {/* Next / Finish CTA with Spring Animation */}
         <TouchableOpacity
-          style={styles.ctaButton}
+          style={[styles.ctaButton, { backgroundColor: currentSlide.tagColor }]}
           onPress={handleNext}
           activeOpacity={0.85}
         >
@@ -425,25 +722,58 @@ const styles = StyleSheet.create({
     backgroundColor: '#070D1E',
     paddingTop: SAFE_TOP_PADDING,
     justifyContent: 'space-between',
+    position: 'relative',
+  },
+  ambientOrbTop: {
+    position: 'absolute',
+    top: -60,
+    right: -40,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    zIndex: 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    zIndex: 10,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   brandBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: RADIUS.xs,
     borderWidth: 1,
-    borderColor: '#10B981',
+  },
+  brandDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   brandBadgeText: {
     ...TYPOGRAPHY.labelSmall,
-    color: '#10B981',
+    fontSize: 10.5,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
@@ -462,6 +792,7 @@ const styles = StyleSheet.create({
   },
   flatList: {
     flex: 1,
+    zIndex: 5,
   },
   slideContainer: {
     width: SW,
@@ -471,12 +802,12 @@ const styles = StyleSheet.create({
   },
   heroBox: {
     width: SW - 40,
-    height: 200,
+    height: 205,
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.18)',
-    marginBottom: 18,
+    marginBottom: 16,
     position: 'relative',
     backgroundColor: '#0E172F',
     ...SHADOWS.medium,
@@ -488,13 +819,13 @@ const styles = StyleSheet.create({
   },
   vignetteOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(7, 13, 30, 0.55)',
+    backgroundColor: 'rgba(7, 13, 30, 0.58)',
   },
   floatingTagPill: {
     position: 'absolute',
     top: 12,
     left: 14,
-    backgroundColor: 'rgba(7, 13, 30, 0.8)',
+    backgroundColor: 'rgba(7, 13, 30, 0.85)',
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: RADIUS.xs,
@@ -511,7 +842,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 14,
-    backgroundColor: 'rgba(7, 13, 30, 0.85)',
+    backgroundColor: 'rgba(7, 13, 30, 0.88)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: RADIUS.full,
@@ -559,8 +890,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   hudResPill: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 7,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: RADIUS.xs,
   },
@@ -572,64 +903,76 @@ const styles = StyleSheet.create({
   },
   centerTabletFrame: {
     alignSelf: 'center',
-    width: '80%',
-    height: 65,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.4)',
+    width: '82%',
+    height: 70,
+    borderWidth: 1.2,
     borderRadius: RADIUS.sm,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     position: 'relative',
+    overflow: 'hidden',
+  },
+  radarRing: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
   cornerBracket: {
     position: 'absolute',
     width: 10,
     height: 10,
-    borderColor: '#10B981',
   },
   cornerTL: { top: -2, left: -2, borderTopWidth: 2, borderLeftWidth: 2 },
   cornerTR: { top: -2, right: -2, borderTopWidth: 2, borderRightWidth: 2 },
   cornerBL: { bottom: -2, left: -2, borderBottomWidth: 2, borderLeftWidth: 2 },
   cornerBR: { bottom: -2, right: -2, borderBottomWidth: 2, borderRightWidth: 2 },
   channelBannerPill: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: RADIUS.xs,
+    marginBottom: 4,
   },
   channelBannerText: {
     color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 12,
+    fontSize: 11.5,
+  },
+  signalMetaText: {
+    fontSize: 9.5,
+    color: '#94A3B8',
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
   rewardsGoldCard: {
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(7, 13, 30, 0.85)',
+    backgroundColor: 'rgba(7, 13, 30, 0.88)',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: '#FFB800',
     gap: 10,
+    width: '88%',
   },
   coinCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
   },
   rewardsBalanceLabel: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: '800',
     color: '#FFB800',
     letterSpacing: 0.6,
   },
   rewardsBalanceValue: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '900',
     color: '#FFFFFF',
   },
@@ -637,9 +980,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  payoutTrack: {
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 1.5,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  payoutFill: {
+    height: '100%',
+    backgroundColor: '#10B981',
+  },
   hudBottomPrompt: {
     alignSelf: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: RADIUS.full,
@@ -667,9 +1021,16 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   stepLine: {
-    width: 28,
+    width: 24,
     height: 2,
     borderRadius: 1,
+    marginRight: 8,
+  },
+  stepTagLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 1,
   },
   mainTitle: {
     ...TYPOGRAPHY.headlineLarge,
@@ -682,9 +1043,9 @@ const styles = StyleSheet.create({
   mainDesc: {
     ...TYPOGRAPHY.bodyMedium,
     color: '#94A3B8',
-    fontSize: 14,
-    lineHeight: 21,
-    marginBottom: 16,
+    fontSize: 13.5,
+    lineHeight: 20,
+    marginBottom: 14,
   },
   featuresRow: {
     flexDirection: 'row',
@@ -699,15 +1060,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
+  featureIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   featureEmoji: {
-    fontSize: 18,
-    marginBottom: 4,
+    fontSize: 16,
   },
   featureTitle: {
     ...TYPOGRAPHY.labelMedium,
     color: '#FFFFFF',
     fontWeight: '800',
     marginBottom: 2,
+    fontSize: 12.5,
   },
   featureDesc: {
     ...TYPOGRAPHY.bodySmall,
@@ -725,6 +1095,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
     backgroundColor: '#070D1E',
+    zIndex: 10,
   },
   dotsRow: {
     flexDirection: 'row',
@@ -736,8 +1107,7 @@ const styles = StyleSheet.create({
     borderRadius: 3.5,
   },
   dotActive: {
-    width: 24,
-    backgroundColor: '#10B981',
+    width: 26,
   },
   dotInactive: {
     width: 7,
@@ -750,7 +1120,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 13,
     borderRadius: RADIUS.lg,
-    backgroundColor: '#10B981',
     ...SHADOWS.md,
   },
   ctaText: {
